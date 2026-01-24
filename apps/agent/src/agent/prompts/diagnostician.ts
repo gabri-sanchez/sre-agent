@@ -16,6 +16,7 @@ Guidelines:
 - Print clear output about what you found
 - Stop when you have enough evidence to make a decision
 - Maximum 3 diagnostic iterations
+- IMPORTANT: Always use the specific health endpoints provided in the prompt when checking service health
 
 When you have enough information, set shouldContinue to false.
 
@@ -28,6 +29,7 @@ export function formatDiagnosticPrompt(context: {
   suggestedDiagnostics: string[];
   previousResults: Array<{ tool: string; output: string; success: boolean }>;
   iterationCount: number;
+  healthEndpoints?: string;
 }): string {
   let prompt = `## Error Being Diagnosed
 
@@ -39,7 +41,17 @@ ${context.hypothesis}
 
 ## Suggested Diagnostics
 ${context.suggestedDiagnostics.map((d, i) => `${i + 1}. ${d}`).join("\n")}
+`;
 
+  if (context.healthEndpoints) {
+    prompt += `
+## Available Health Endpoints
+You MUST check these endpoints using the check_http_endpoint tool:
+${context.healthEndpoints}
+`;
+  }
+
+  prompt += `
 ## Iteration ${context.iterationCount + 1} of 3
 `;
 

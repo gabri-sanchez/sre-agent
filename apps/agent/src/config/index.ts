@@ -6,6 +6,9 @@ const envSchema = z.object({
   BASE_URL: z.string().default("http://localhost:3001"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 
+  // Demo App
+  DEMO_APP_URL: z.string().default("http://localhost:3000"),
+
   // Anthropic
   ANTHROPIC_API_KEY: z.string(),
 
@@ -37,6 +40,9 @@ export const config = {
     port: parseInt(parsed.data.PORT, 10),
     baseUrl: parsed.data.BASE_URL,
     nodeEnv: parsed.data.NODE_ENV,
+  },
+  demoApp: {
+    url: parsed.data.DEMO_APP_URL,
   },
   anthropic: {
     apiKey: parsed.data.ANTHROPIC_API_KEY,

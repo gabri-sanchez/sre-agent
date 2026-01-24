@@ -1,5 +1,6 @@
 import { Settings } from "lucide-react";
 import { ErrorTriggerPanel } from "@/components/error-trigger-panel";
+import { HealthTogglePanel } from "@/components/health-toggle-panel";
 
 export default function AdminPage() {
   return (
@@ -10,6 +11,19 @@ export default function AdminPage() {
       </div>
 
       <div className="space-y-8">
+        {/* Service Health Section */}
+        <section>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Service Health Controls
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Toggle service health status to simulate outages. When a service is
+            marked as DOWN, its health endpoint will return 503. The SRE agent
+            uses these endpoints to verify service status during diagnostics.
+          </p>
+          <HealthTogglePanel />
+        </section>
+
         {/* Error Trigger Section */}
         <section>
           <h2 className="text-xl font-semibold text-gray-900 mb-4">

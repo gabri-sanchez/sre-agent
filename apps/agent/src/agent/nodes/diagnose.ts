@@ -1,6 +1,7 @@
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { config } from "../../config";
+import { getHealthEndpointsForPrompt } from "../../config/services";
 import type { DiagnosticStateType } from "../state";
 import type { DiagnosticResult } from "@sre-agent/shared";
 import {
@@ -39,6 +40,9 @@ export async function diagnoseWithToolsNode(
     success: r.success,
   }));
 
+  // Get health endpoints for the affected service
+  const healthEndpoints = getHealthEndpointsForPrompt(state.errorContext.service);
+
   const userMessage = formatDiagnosticPrompt({
     title: state.errorContext.title,
     service: state.errorContext.service,
@@ -46,6 +50,7 @@ export async function diagnoseWithToolsNode(
     suggestedDiagnostics: state.analysisResult.suggestedDiagnostics,
     previousResults,
     iterationCount: state.iterationCount,
+    healthEndpoints,
   });
 
   // Get LLM response with potential tool calls
