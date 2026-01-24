@@ -11,9 +11,10 @@ export async function enrichErrorContext(
 ): Promise<ErrorContext> {
   const { issue, event } = payload.data;
 
-  // Extract service and severity from tags
-  const serviceTags = issue.tags.filter((t) => t.key === "service");
-  const severityTags = issue.tags.filter((t) => t.key === "severity");
+  // Extract service and severity from tags (defensive: tags may be undefined)
+  const tags = issue.tags ?? [];
+  const serviceTags = tags.filter((t) => t.key === "service");
+  const severityTags = tags.filter((t) => t.key === "severity");
 
   const service = (serviceTags[0]?.value as Service) || inferService(issue.title);
   const severity = (severityTags[0]?.value as Severity) || inferSeverity(issue.level);
@@ -40,8 +41,8 @@ export async function enrichErrorContext(
       .join("\n\n");
   }
 
-  // Track frequency
-  const errorType = issue.metadata.type || issue.type;
+  // Track frequency (defensive: metadata may be undefined)
+  const errorType = issue.metadata?.type || issue.type || "unknown";
   const frequency = frequencyTracker.record(service, errorType, issue.id);
 
   const context: ErrorContext = {
@@ -49,17 +50,17 @@ export async function enrichErrorContext(
     sentryEventId: event?.event_id || "",
     sentryIssueId: issue.id,
     title: issue.title,
-    message: issue.metadata.value || issue.title,
+    message: issue.metadata?.value || issue.title,
     service,
     severity,
-    level: issue.level,
+    level: issue.level || "error",
     stackTrace,
-    userCount: issue.userCount,
-    occurrenceCount: parseInt(issue.count, 10),
+    userCount: issue.userCount ?? 0,
+    occurrenceCount: parseInt(issue.count ?? "1", 10),
     frequencyLast10Min: frequency.count,
-    permalink: issue.permalink,
-    tags: Object.fromEntries(issue.tags.map((t) => [t.key, t.value])),
-    timestamp: new Date(issue.lastSeen),
+    permalink: issue.permalink || "",
+    tags: Object.fromEntries(tags.map((t) => [t.key, t.value])),
+    timestamp: issue.lastSeen ? new Date(issue.lastSeen) : new Date(),
     affectedUser: event?.user
       ? {
           id: event.user.id,

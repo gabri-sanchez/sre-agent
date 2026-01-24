@@ -19,6 +19,13 @@ app.post("/sentry", verifySentrySignature, async (c) => {
 
   console.log("Received Sentry webhook");
   console.log(`Action: ${payload.action}`);
+
+  // Handle test notifications from Sentry integration settings
+  if (payload.action === "test" || !payload.data?.issue) {
+    console.log("Test notification received - webhook is working!");
+    return c.json({ status: "ok", message: "Test notification received successfully" });
+  }
+
   console.log(`Issue: ${payload.data.issue.title}`);
 
   // Only process new issues
@@ -29,14 +36,16 @@ app.post("/sentry", verifySentrySignature, async (c) => {
 
   try {
     // Enrich the error context
+    console.log("[1/4] Enriching error context...");
     const errorContext = await enrichErrorContext(payload);
-    console.log(`Error context enriched: ${errorContext.service} / ${errorContext.severity}`);
+    console.log(`[2/4] Error context enriched: ${errorContext.service} / ${errorContext.severity}`);
 
     // Run the diagnostic agent
+    console.log("[3/4] Running diagnostic agent...");
     const agentResult = await runDiagnosticAgent(errorContext);
     const { finalDecision } = agentResult;
 
-    console.log(`Agent decision: ${finalDecision.action}`);
+    console.log(`[4/4] Agent decision: ${finalDecision.action}`);
 
     // Take action based on decision
     if (finalDecision.action === "CALL") {
@@ -66,7 +75,15 @@ app.post("/sentry", verifySentrySignature, async (c) => {
       decision: finalDecision,
     });
   } catch (error) {
-    console.error("Error processing webhook:", error);
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.error("Error processing webhook:");
+    if (error instanceof Error) {
+      console.error("Message:", error.message);
+      console.error("Stack:", error.stack);
+    } else {
+      console.error("Unknown error:", error);
+    }
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     // Return error but with 200 to prevent Sentry retries
     return c.json({

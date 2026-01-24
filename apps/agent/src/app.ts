@@ -23,8 +23,16 @@ app.notFound((c) => {
 
 // Error handler
 app.onError((err, c) => {
-  console.error("Unhandled error:", err);
-  return c.json({ error: "Internal Server Error" }, 500);
+  console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.error("Unhandled error:", err.message);
+  console.error("Path:", c.req.path);
+  console.error("Method:", c.req.method);
+  if (err.stack) {
+    console.error("Stack trace:");
+    console.error(err.stack);
+  }
+  console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  return c.json({ error: "Internal Server Error", message: err.message }, 500);
 });
 
 export default app;

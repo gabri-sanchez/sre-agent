@@ -18,7 +18,13 @@ export function captureServiceError(
       });
     }
 
-    Sentry.captureException(error);
+    const eventId = Sentry.captureException(error);
+    console.log("[sentry] captureException called", {
+      eventId,
+      service,
+      severity,
+      message: error.message,
+    });
   });
 }
 
