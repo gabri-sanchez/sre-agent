@@ -4,6 +4,9 @@ import { enrichErrorContext } from "../services/context-enricher";
 import { runDiagnosticAgent } from "../agent/graph";
 import { twilioCaller } from "../services/twilio-caller";
 import { getEngineerForService } from "../config/engineers";
+import { generateReport } from "../services/report-generator";
+import { saveReport } from "../services/report-store";
+import { config } from "../config";
 import type { SentryWebhookPayload } from "@sre-agent/shared";
 
 type Variables = {
@@ -43,9 +46,30 @@ app.post("/sentry", verifySentrySignature, async (c) => {
     // Run the diagnostic agent
     console.log("[3/4] Running diagnostic agent...");
     const agentResult = await runDiagnosticAgent(errorContext);
-    const { finalDecision } = agentResult;
+    const { finalDecision, diagnosticResults, analysisResult } = agentResult;
 
     console.log(`[4/4] Agent decision: ${finalDecision.action}`);
+
+    // Generate and store the HTML report
+    console.log("────────────────────────────────────────────────────────────");
+    console.log("Generating diagnostic report...");
+    console.log(`  Error: ${errorContext.title}`);
+    console.log(`  Service: ${errorContext.service}`);
+    console.log(`  Severity: ${finalDecision.severity}`);
+    console.log(`  Decision: ${finalDecision.action}`);
+    console.log(`  Diagnostics run: ${diagnosticResults.length}`);
+    console.log(`  Talking points: ${finalDecision.talkingPoints.length}`);
+    const reportHtml = generateReport({
+      errorContext,
+      analysisResult,
+      diagnosticResults,
+      finalDecision,
+    });
+    saveReport(errorContext.id, reportHtml);
+    const reportUrl = `${config.server.baseUrl}/reports/${errorContext.id}`;
+    console.log(`Report saved: ${errorContext.id}`);
+    console.log(`Report URL: ${reportUrl}`);
+    console.log("────────────────────────────────────────────────────────────");
 
     // Take action based on decision
     if (finalDecision.action === "CALL") {
@@ -66,6 +90,7 @@ app.post("/sentry", verifySentrySignature, async (c) => {
           engineer: engineer.name,
           status: callRecord.status,
         },
+        reportUrl,
       });
     }
 
@@ -73,6 +98,7 @@ app.post("/sentry", verifySentrySignature, async (c) => {
     return c.json({
       status: finalDecision.action.toLowerCase(),
       decision: finalDecision,
+      reportUrl,
     });
   } catch (error) {
     console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

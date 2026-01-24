@@ -15,11 +15,12 @@ console.log(`
 `);
 
 console.log("Endpoints:");
-console.log(`  GET  /health        - Health check`);
+console.log(`  GET  /health         - Health check`);
 console.log(`  POST /webhook/sentry - Sentry webhook receiver`);
 console.log(`  POST /twilio/voice   - Twilio voice TwiML`);
 console.log(`  POST /twilio/gather  - Twilio gather response`);
 console.log(`  POST /twilio/status  - Twilio status callback`);
+console.log(`  GET  /reports/:id    - View diagnostic report`);
 console.log("");
 
 serve({

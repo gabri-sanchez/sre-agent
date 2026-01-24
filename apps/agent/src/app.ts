@@ -4,6 +4,7 @@ import { logger } from "hono/logger";
 import webhookRoutes from "./routes/webhook";
 import twilioRoutes from "./routes/twilio";
 import healthRoutes from "./routes/health";
+import reportRoutes from "./routes/reports";
 
 const app = new Hono();
 
@@ -14,6 +15,7 @@ app.use("*", cors());
 // Routes
 app.route("/webhook", webhookRoutes);
 app.route("/twilio", twilioRoutes);
+app.route("/reports", reportRoutes);
 app.route("/", healthRoutes);
 
 // 404 handler
