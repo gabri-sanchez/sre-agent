@@ -19,3 +19,7 @@ export function deleteReport(id: string): boolean {
 export function getReportCount(): number {
   return reports.size;
 }
+
+export function listReportIds(): string[] {
+  return Array.from(reports.keys());
+}

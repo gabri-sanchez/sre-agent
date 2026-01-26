@@ -1,5 +1,13 @@
 export interface SentryWebhookPayload {
-  action: "created" | "resolved" | "assigned" | "archived" | "unresolved" | "test";
+  action:
+    | "created"
+    | "resolved"
+    | "assigned"
+    | "archived"
+    | "unresolved"
+    | "reopened"
+    | "regressed"
+    | "test";
   installation: {
     uuid: string;
   };

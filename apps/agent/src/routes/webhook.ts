@@ -21,20 +21,27 @@ app.post("/sentry", verifySentrySignature, async (c) => {
   const payload = c.get("parsedBody");
 
   console.log("Received Sentry webhook");
-  console.log(`Action: ${payload.action}`);
+  const action = payload.action as
+    | SentryWebhookPayload["action"]
+    | "test"
+    | "reopened"
+    | "regressed";
+
+  console.log(`Action: ${action}`);
 
   // Handle test notifications from Sentry integration settings
-  if (payload.action === "test" || !payload.data?.issue) {
+  if (action === "test" || !payload.data?.issue) {
     console.log("Test notification received - webhook is working!");
     return c.json({ status: "ok", message: "Test notification received successfully" });
   }
 
   console.log(`Issue: ${payload.data.issue.title}`);
 
-  // Only process new issues
-  if (payload.action !== "created") {
-    console.log(`Ignoring action: ${payload.action}`);
-    return c.json({ status: "ignored", reason: `action=${payload.action}` });
+  // Process issue actions that indicate a new or re-opened error state
+  const actionableActions = new Set(["created", "unresolved", "reopened", "regressed"]);
+  if (!actionableActions.has(action)) {
+    console.log(`Ignoring action: ${action}`);
+    return c.json({ status: "ignored", reason: `action=${action}` });
   }
 
   try {
@@ -125,6 +132,112 @@ app.get("/sentry", (c) => {
     status: "ok",
     message: "Sentry webhook endpoint is active",
     method: "POST /webhook/sentry",
+  });
+});
+
+// Test endpoint to generate a sample report without going through Sentry
+app.post("/test-report", async (c) => {
+  console.log("========================================");
+  console.log("Generating test report...");
+  console.log("========================================");
+
+  const testErrorContext = {
+    id: `test-${Date.now()}`,
+    sentryEventId: "abc123def456",
+    sentryIssueId: "ISSUE-123",
+    title: "Payment Gateway Timeout",
+    message: "Connection to payment.provider.com timed out after 30000ms",
+    service: "payments" as const,
+    severity: "critical" as const,
+    level: "error",
+    stackTrace: `Error: Payment Gateway Timeout
+    at processPayment (src/services/payments.ts:45:11)
+    at checkout (src/routes/checkout.ts:123:5)
+    at async handleRequest (src/server.ts:89:3)`,
+    userCount: 150,
+    occurrenceCount: 342,
+    frequencyLast10Min: 47,
+    permalink: "https://sentry.io/issues/123",
+    tags: { environment: "production" },
+    timestamp: new Date(),
+  };
+
+  const testAnalysisResult = {
+    initialSeverity: "critical" as const,
+    hypothesis: "The payment service is experiencing connectivity issues with the upstream payment gateway. This could be due to network problems, rate limiting, or an outage at the payment provider.",
+    suggestedDiagnostics: [
+      "Check payment gateway connectivity",
+      "Verify API credentials are valid",
+      "Check for rate limiting responses",
+      "Review recent deployments",
+    ],
+  };
+
+  const testDiagnosticResults = [
+    {
+      tool: "check_http_endpoint",
+      input: "http://localhost:3000/api/health/payments",
+      output: "FAILED: Service Unavailable\nStatus: 503\nLatency: 45ms",
+      success: false,
+      timestamp: new Date(Date.now() - 5000),
+    },
+    {
+      tool: "execute_python",
+      input: "check_payment_gateway_connectivity()",
+      output: "Connection refused to payment.provider.com:443\nTimeout after 10s",
+      success: true,
+      timestamp: new Date(Date.now() - 3000),
+    },
+    {
+      tool: "query_logs",
+      input: "service:payments level:error",
+      output: "Found 47 errors in last 10 minutes\nMost common: PaymentGatewayTimeout (89%)",
+      success: true,
+      timestamp: new Date(Date.now() - 1000),
+    },
+  ];
+
+  const testFinalDecision = {
+    action: "CALL" as const,
+    severity: "critical" as const,
+    summary: "Payment gateway is experiencing a complete outage affecting all transactions",
+    rootCause: "Payment gateway connection timeout due to upstream provider issues. The external payment processor appears to be experiencing an outage.",
+    talkingPoints: [
+      "Payment gateway returning 503 errors for all requests",
+      "150 users affected in last 10 minutes",
+      "Revenue impact estimated at $500/minute based on average transaction volume",
+      "Upstream provider status page shows degraded performance",
+    ],
+    diagnosticEvidence: [
+      "Health endpoint returning 503",
+      "Connection timeouts to payment.provider.com",
+      "47 errors logged in last 10 minutes",
+    ],
+  };
+
+  const reportHtml = generateReport({
+    errorContext: testErrorContext,
+    analysisResult: testAnalysisResult,
+    diagnosticResults: testDiagnosticResults,
+    finalDecision: testFinalDecision,
+  });
+
+  saveReport(testErrorContext.id, reportHtml);
+  const reportUrl = `${config.server.baseUrl}/reports/${testErrorContext.id}`;
+
+  console.log("────────────────────────────────────────────────────────────");
+  console.log("Test report generated!");
+  console.log(`  Error: ${testErrorContext.title}`);
+  console.log(`  Service: ${testErrorContext.service}`);
+  console.log(`  Severity: ${testFinalDecision.severity}`);
+  console.log(`  Decision: ${testFinalDecision.action}`);
+  console.log(`Report URL: ${reportUrl}`);
+  console.log("────────────────────────────────────────────────────────────");
+
+  return c.json({
+    status: "test_report_generated",
+    reportUrl,
+    reportId: testErrorContext.id,
   });
 });
 

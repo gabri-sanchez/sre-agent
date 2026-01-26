@@ -1,7 +1,19 @@
 import { Hono } from "hono";
-import { getReport } from "../services/report-store";
+import { getReport, listReportIds, getReportCount } from "../services/report-store";
 
 const app = new Hono();
+
+// List all available reports
+app.get("/", (c) => {
+  const ids = listReportIds();
+  return c.json({
+    count: getReportCount(),
+    reports: ids.map((id) => ({
+      id,
+      url: `/reports/${id}`,
+    })),
+  });
+});
 
 // Get HTML report by ID
 app.get("/:id", (c) => {
