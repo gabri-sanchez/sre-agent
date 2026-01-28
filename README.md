@@ -6,7 +6,7 @@ An intelligent on-call agent powered by Sentry that demonstrates a full incident
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Demo App      │     │     Sentry      │     │     Agent       │     │     Twilio      │
+│   Demo App      │     │     Sentry      │     │     Agent       │     │      Vapi       │
 │   (Next.js)     │────▶│     Cloud       │────▶│    Backend      │────▶│      API        │
 │                 │     │                 │     │    (Hono)       │     │                 │
 └─────────────────┘     └─────────────────┘     └─────────────────┘     └────────┬────────┘
@@ -24,7 +24,7 @@ An intelligent on-call agent powered by Sentry that demonstrates a full incident
 - **E-commerce Demo App**: Realistic store with intentional error triggers
 - **LangGraph Diagnostic Agent**: AI-powered error analysis with tool execution
 - **Sentry Integration**: Webhook-based error capture and routing
-- **Twilio Voice Calls**: Automated paging with acknowledgment support
+- **Vapi Voice Calls**: AI-powered voice calls with natural conversation
 
 ## Project Structure
 
@@ -45,7 +45,7 @@ sre-agent/
 - [Bun](https://bun.sh/) v1.0+
 - [ngrok](https://ngrok.com/) for webhook tunneling
 - Sentry account with internal integration
-- Twilio account with phone number
+- Vapi account with phone number
 - Anthropic API key
 
 ### Installation
@@ -73,10 +73,11 @@ cp apps/agent/.env.example apps/agent/.env
    - Copy the Client Secret to `SENTRY_WEBHOOK_SECRET`
    - Set webhook URL to `https://your-ngrok-url/webhook/sentry`
 
-2. **Twilio Setup**
-   - Get Account SID and Auth Token from console
-   - Purchase a phone number
-   - Update `TWILIO_*` variables in `.env`
+2. **Vapi Setup**
+   - Get API key from dashboard.vapi.ai
+   - Purchase or import a phone number
+   - Configure webhook URL on the phone number: `https://your-ngrok-url/vapi/webhook`
+   - Update `VAPI_*` variables in `.env`
 
 3. **Anthropic Setup**
    - Get API key from console.anthropic.com
@@ -104,7 +105,7 @@ Open http://localhost:3000 to see the demo app.
 2. **Trigger Errors**: Use checkout (payment), login (auth), or admin panel
 3. **Agent Analyzes**: Watch the agent console for LangGraph execution
 4. **Receive Call**: If severity warrants, your phone will ring
-5. **Acknowledge**: Press 1 to acknowledge, 2 to escalate
+5. **Acknowledge**: Speak naturally to acknowledge or escalate
 
 ## Error Types
 

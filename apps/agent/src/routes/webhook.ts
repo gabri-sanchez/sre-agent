@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { verifySentrySignature } from "../middleware/sentry-signature";
 import { enrichErrorContext } from "../services/context-enricher";
 import { runDiagnosticAgent } from "../agent/graph";
-import { twilioCaller } from "../services/twilio-caller";
+import { vapiCaller } from "../services/vapi-caller";
 import { getEngineerForService } from "../config/engineers";
 import { generateReport } from "../services/report-generator";
 import { saveReport } from "../services/report-store";
@@ -19,6 +19,8 @@ const app = new Hono<{ Variables: Variables }>();
 // Sentry webhook endpoint
 app.post("/sentry", verifySentrySignature, async (c) => {
   const payload = c.get("parsedBody");
+  const resource = c.req.header("sentry-hook-resource");
+  let effectivePayload = payload;
 
   console.log("Received Sentry webhook");
   const action = payload.action as
@@ -30,15 +32,45 @@ app.post("/sentry", verifySentrySignature, async (c) => {
   console.log(`Action: ${action}`);
 
   // Handle test notifications from Sentry integration settings
-  if (action === "test" || !payload.data?.issue) {
+  if (action === "test") {
     console.log("Test notification received - webhook is working!");
     return c.json({ status: "ok", message: "Test notification received successfully" });
   }
 
-  console.log(`Issue: ${payload.data.issue.title}`);
+  // If this is an event-only webhook (ex: metric alerts), synthesize an issue shape
+  if (!payload.data?.issue && payload.data?.event) {
+    const synthesizedIssue = buildIssueFromEvent(
+      payload.data.event as NonNullable<SentryWebhookPayload["data"]["event"]> &
+        Record<string, unknown>
+    );
+    effectivePayload = {
+      ...payload,
+      data: {
+        ...payload.data,
+        issue: synthesizedIssue,
+      },
+    };
+    console.log("Event-only webhook received; synthesized issue", {
+      action,
+      resource,
+      issueId: synthesizedIssue.id,
+      eventId: payload.data.event.event_id,
+    });
+  } else if (!payload.data?.issue) {
+    console.log("Unsupported webhook payload received", { action, resource });
+    return c.json({ status: "ignored", reason: "unsupported_payload", action, resource });
+  }
+
+  console.log(`Issue: ${effectivePayload.data.issue.title}`);
 
   // Process issue actions that indicate a new or re-opened error state
-  const actionableActions = new Set(["created", "unresolved", "reopened", "regressed"]);
+  const actionableActions = new Set([
+    "created",
+    "unresolved",
+    "reopened",
+    "regressed",
+    "triggered",
+  ]);
   if (!actionableActions.has(action)) {
     console.log(`Ignoring action: ${action}`);
     return c.json({ status: "ignored", reason: `action=${action}` });
@@ -47,7 +79,7 @@ app.post("/sentry", verifySentrySignature, async (c) => {
   try {
     // Enrich the error context
     console.log("[1/4] Enriching error context...");
-    const errorContext = await enrichErrorContext(payload);
+    const errorContext = await enrichErrorContext(effectivePayload);
     console.log(`[2/4] Error context enriched: ${errorContext.service} / ${errorContext.severity}`);
 
     // Run the diagnostic agent
@@ -83,7 +115,7 @@ app.post("/sentry", verifySentrySignature, async (c) => {
       const engineer = getEngineerForService(errorContext.service);
       console.log(`Initiating call to ${engineer.name} (${engineer.phone})`);
 
-      const callRecord = await twilioCaller.initiateCall(
+      const callRecord = await vapiCaller.initiateCall(
         engineer,
         finalDecision,
         errorContext.id
@@ -242,3 +274,65 @@ app.post("/test-report", async (c) => {
 });
 
 export default app;
+
+function buildIssueFromEvent(
+  event: NonNullable<SentryWebhookPayload["data"]["event"]> & Record<string, unknown>
+): SentryWebhookPayload["data"]["issue"] {
+  const metadata = event?.metadata as Record<string, unknown> | undefined;
+  const issueId = event?.issue_id
+    ? String(event.issue_id)
+    : `evt_${event?.event_id || Date.now()}`;
+  const title = String(event?.title || event?.message || "Sentry event alert");
+  const level = (event?.level as SentryWebhookPayload["data"]["issue"]["level"]) || "error";
+  const tagsInput = Array.isArray(event?.tags) ? event.tags : [];
+  const tags = tagsInput.map((tag) => {
+    if (Array.isArray(tag)) {
+      const [key, value] = tag;
+      return { key: String(key), value: String(value), name: String(key) };
+    }
+    const key = String((tag as { key?: string }).key || "tag");
+    const value = String((tag as { value?: string }).value || "");
+    return { key, value, name: key };
+  });
+  const lastSeen =
+    typeof event?.datetime === "string"
+      ? event.datetime
+      : typeof event?.timestamp === "string"
+        ? event.timestamp
+        : new Date().toISOString();
+  const platform = String(event?.platform || "unknown");
+  const permalink = String(event?.web_url || event?.url || event?.issue_url || "");
+
+  return {
+    id: issueId,
+    shortId: `ISSUE-${issueId}`,
+    title,
+    culprit: String(event?.culprit || title),
+    permalink,
+    logger: (event?.logger as string | null) ?? null,
+    level,
+    status: "unresolved",
+    statusDetails: {},
+    isPublic: false,
+    platform,
+    project: {
+      id: String(event?.project ?? "unknown"),
+      name: String(event?.project ?? "unknown"),
+      slug: String(event?.project ?? "unknown"),
+      platform,
+    },
+    type: String(event?.type || "error"),
+    metadata: {
+      value: String(metadata?.value || event?.message || title),
+      type: String(metadata?.type || event?.type || "error"),
+      filename: metadata?.filename as string | undefined,
+      function: metadata?.function as string | undefined,
+    },
+    numComments: 0,
+    userCount: typeof event?.userCount === "number" ? event.userCount : 0,
+    count: typeof event?.count === "string" ? event.count : "1",
+    firstSeen: lastSeen,
+    lastSeen,
+    tags,
+  };
+}

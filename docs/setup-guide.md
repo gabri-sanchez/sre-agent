@@ -28,7 +28,7 @@ This guide walks you through setting up the SRE Agent demo from scratch.
 ### Required Accounts
 
 1. **Sentry** - https://sentry.io
-2. **Twilio** - https://www.twilio.com
+2. **Vapi** - https://vapi.ai
 3. **Anthropic** - https://console.anthropic.com
 
 ## Step 1: Clone and Install
@@ -75,20 +75,26 @@ After starting ngrok (see Step 5), update the webhook URL:
    - Action: Send notification via "SRE Agent" integration
 4. Save
 
-## Step 3: Twilio Configuration
+## Step 3: Vapi Configuration
 
 ### Get Credentials
 
-1. Go to https://console.twilio.com
-2. Copy from dashboard:
-   - Account SID (starts with `AC`)
-   - Auth Token
+1. Go to https://dashboard.vapi.ai
+2. Copy your API key from the dashboard
 
 ### Get a Phone Number
 
-1. Go to Phone Numbers > Buy a Number
-2. Choose a number with Voice capability
-3. Note the phone number (format: `+1XXXXXXXXXX`)
+1. Go to Phone Numbers in the Vapi dashboard
+2. Buy or import a phone number with Voice capability
+3. Note the Phone Number ID (used in `VAPI_PHONE_NUMBER_ID`)
+
+### Configure Webhook
+
+After starting ngrok (see Step 6), configure the webhook on your phone number:
+
+1. Select your phone number in the Vapi dashboard
+2. Set Server URL to: `https://your-ngrok-url.ngrok.io/vapi/webhook`
+3. Save the configuration
 
 ## Step 4: Anthropic Configuration
 
@@ -126,9 +132,8 @@ NODE_ENV=development
 ANTHROPIC_API_KEY=sk-ant-xxx
 SENTRY_WEBHOOK_SECRET=your-client-secret-from-step-2
 
-TWILIO_ACCOUNT_SID=ACxxxxxxxx
-TWILIO_AUTH_TOKEN=your-auth-token
-TWILIO_PHONE_NUMBER=+15551234567
+VAPI_API_KEY=your-vapi-api-key
+VAPI_PHONE_NUMBER_ID=your-phone-number-id
 
 # Update with your phone number for testing
 ENGINEER_PAYMENTS_PHONE=+1XXXXXXXXXX
@@ -145,6 +150,7 @@ ngrok http 3001
 Copy the `https://xxx.ngrok.io` URL and:
 1. Update `BASE_URL` in `apps/agent/.env`
 2. Update webhook URL in Sentry integration settings
+3. Update Server URL on your Vapi phone number to `https://xxx.ngrok.io/vapi/webhook`
 
 ### Terminal 2: Agent Backend
 
@@ -188,11 +194,12 @@ Open http://localhost:3000
 - Verify Sentry integration webhook URL
 - Check agent logs for incoming requests
 
-### Twilio call not working
+### Vapi call not working
 
 - Verify phone number format (`+1XXXXXXXXXX`)
-- Check Twilio account has credits
-- Verify Account SID and Auth Token
+- Check Vapi account has credits
+- Verify API key and Phone Number ID are correct
+- Ensure webhook URL is configured on the phone number in Vapi dashboard
 
 ### Agent errors
 

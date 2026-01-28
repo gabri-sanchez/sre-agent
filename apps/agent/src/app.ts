@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import webhookRoutes from "./routes/webhook";
-import twilioRoutes from "./routes/twilio";
+import vapiRoutes from "./routes/vapi";
 import healthRoutes from "./routes/health";
 import reportRoutes from "./routes/reports";
 
@@ -14,7 +14,7 @@ app.use("*", cors());
 
 // Routes
 app.route("/webhook", webhookRoutes);
-app.route("/twilio", twilioRoutes);
+app.route("/vapi", vapiRoutes);
 app.route("/reports", reportRoutes);
 app.route("/", healthRoutes);
 

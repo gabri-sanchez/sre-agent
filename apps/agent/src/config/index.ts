@@ -18,10 +18,10 @@ const envSchema = z.object({
   // Sentry
   SENTRY_WEBHOOK_SECRET: z.string(),
 
-  // Twilio
-  TWILIO_ACCOUNT_SID: z.string(),
-  TWILIO_AUTH_TOKEN: z.string(),
-  TWILIO_PHONE_NUMBER: z.string(),
+  // Vapi
+  VAPI_API_KEY: z.string(),
+  VAPI_PHONE_NUMBER_ID: z.string(),
+  VAPI_WEBHOOK_SECRET: z.string().optional(),
 
   // Diagnostic Context (optional)
   DATABASE_URL: z.string().optional(),
@@ -53,10 +53,10 @@ export const config = {
   sentry: {
     webhookSecret: parsed.data.SENTRY_WEBHOOK_SECRET,
   },
-  twilio: {
-    accountSid: parsed.data.TWILIO_ACCOUNT_SID,
-    authToken: parsed.data.TWILIO_AUTH_TOKEN,
-    phoneNumber: parsed.data.TWILIO_PHONE_NUMBER,
+  vapi: {
+    apiKey: parsed.data.VAPI_API_KEY,
+    phoneNumberId: parsed.data.VAPI_PHONE_NUMBER_ID,
+    webhookSecret: parsed.data.VAPI_WEBHOOK_SECRET,
   },
   diagnostics: {
     databaseUrl: parsed.data.DATABASE_URL,

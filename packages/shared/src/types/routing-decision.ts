@@ -29,13 +29,13 @@ export interface RoutingDecision {
 
 export interface CallRecord {
   id: string;
-  twilioCallSid: string;
+  vapiCallId: string;
   errorEventId: string;
   engineer: Engineer;
   initiatedAt: Date;
   answeredAt?: Date;
   acknowledgedAt?: Date;
-  acknowledgmentKey?: string;
+  acknowledgmentNote?: string;
   status:
     | "initiated"
     | "ringing"
@@ -44,4 +44,7 @@ export interface CallRecord {
     | "escalated"
     | "failed";
   escalatedTo?: Engineer;
+  escalationReason?: string;
+  endedReason?: string;
+  fullTranscript?: string;
 }

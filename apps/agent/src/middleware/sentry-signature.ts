@@ -67,6 +67,7 @@ export const verifySentrySignature = createMiddleware<{
   // Store parsed body for route handler
   c.set("rawBody", rawBody);
   c.set("parsedBody", JSON.parse(rawBody));
+  console.log("HTTP: \n" + rawBody)
 
   await next();
 });
